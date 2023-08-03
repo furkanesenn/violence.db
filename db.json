@@ -8,6 +8,10 @@
             "password": "111",
             "role": "Başhekim",
             "email": ""
+        },
+        "user1": {
+            "name": "Furkan",
+            "age": 20
         }
     }
 }

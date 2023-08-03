@@ -2,9 +2,9 @@ import datetime
 import os
 import json
 from abc import ABCMeta, abstractmethod
-from typing import Union, Optional, TypedDict, List
+from typing import Union, Optional, TypedDict, List, Tuple
 
-# TODO: Configparser integration
+# TODO: Configparser integration, unittests, documentation, and more database types.
 
 class Database(metaclass=ABCMeta):
     """
@@ -116,7 +116,7 @@ class LocalDatabase(Database):
         .. note:: If you want to create multiple instances of the class, you can safely remove this function.
         """
         if cls.__instance is None:
-            if not os.path.exists(path) or not os.path.isfile(path) or not path.endswith('.json'):
+            if not cls.__is_valid_path(path):
                 raise FileNotFoundError(f'Could not find the database file at {path} [The file must be a JSON file]')
             
             cls.__instance = super().__new__(cls, *args, **kwargs)
@@ -174,12 +174,12 @@ class LocalDatabase(Database):
 
             data: Union[dict, str] = db.get(key, None)
 
-            if subkeys and len(subkeys) > 0 and isinstance(data, dict):
+            if subkeys and isinstance(data, dict):
         
                 for subkey in subkeys:
                     data = data.get(subkey, None)
                     if data is None: 
-                        break # TODO: hata fırlat
+                        break
                     
             return data
         
@@ -207,7 +207,7 @@ class LocalDatabase(Database):
                 raise KeyNotFoundError(key)
 
             if subkeys and len(subkeys) > 0:
-                self.__find_nested_data(db_content=db, key=key, operation='set', value=value, subkeys=subkeys)
+                self.__find_nested_data(db_content=db, keys=(key, subkeys), operation='set', value=value)
             else: 
                 db[key] = value 
         
@@ -231,7 +231,7 @@ class LocalDatabase(Database):
             key, subkeys = self.__deserialize_key(key).values()
 
             if subkeys and len(subkeys) > 0:
-                self.__find_nested_data(db_content=db, key=key, operation='delete', subkeys=subkeys)
+                self.__find_nested_data(db_content=db, keys=(key, subkeys), operation='delete')
             else:
                 db.pop(key, None)
 
@@ -255,16 +255,14 @@ class LocalDatabase(Database):
         db_file.truncate()
         return True
 
-    def __find_nested_data(self, *, db_content: dict, key: str, subkeys: List[str], operation: str, value: Optional[Union[dict, str]] = '') -> Union[dict, str]:
+    def __find_nested_data(self, *, db_content: dict, keys: Tuple[str, List[str]], operation: str, value: Optional[Union[dict, str]] = '') -> Union[dict, str]:
         """
         Finds the nested data in the database.
 
         :param db_content: The database content to find the nested data in.
         :type db_content: dict
-        :param key: The key to find the nested data in.
-        :type key: str
-        :param subkeys: The subkeys to find the nested data in.
-        :type subkeys: List[str]
+        :param keys: The keys to find the nested data in. (main key, subkeys)
+        :type keys: Tuple[str, List[str]]
         :param operation: The operation to do with the nested data.
         :type operation: str
         :param value: The value to set to the nested data.
@@ -274,7 +272,9 @@ class LocalDatabase(Database):
 
         .. seealso:: :class: `Database`
         """
-        if subkeys and len(subkeys) > 0:
+        key, subkeys = keys
+
+        if subkeys:
             current_dict = db_content[key]
             for key in subkeys[:-1]:
                 current_dict = current_dict.setdefault(key, {})
@@ -302,3 +302,16 @@ class LocalDatabase(Database):
             'main_key': key[0],
             'subkeys': key[1:]
         }
+    
+    def __is_valid_path(path: str) -> bool:
+        """ 
+        Checks if the path is valid.
+
+        :param path: The path to check.
+        :type path: str
+        :return: True if the path is valid, False otherwise.
+        :rtype: bool
+
+        .. seealso:: :class: `Database`
+        """
+        return os.path.exists(path) and os.path.isfile(path) and path.endswith('.json')
