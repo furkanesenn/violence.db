@@ -16,7 +16,6 @@ class Database(metaclass=ABCMeta):
     .. seealso:: :class: `LocalDatabase` 
     
     """
-    __instance = None
 
     def __init__(self):
         """
@@ -31,16 +30,16 @@ class Database(metaclass=ABCMeta):
         self.created_at = datetime.datetime.now()
 
     @abstractmethod
-    def get_data(self, key: str, *subkeys) -> Union[dict, str]:
-        ...
+    def get_data(self, key: str) -> Union[dict, str]:
+        raise NotImplementedError
 
     @abstractmethod
-    def set_data(self, key: str, value, *subkeys) -> bool: 
-        ...
+    def set_data(self, key: str, value: Union[dict, str]) -> bool: 
+        raise NotImplementedError
 
     @abstractmethod
-    def delete_data(self, key: str, *subkeys) -> bool:
-        ... 
+    def delete_data(self, key: str) -> bool:
+        raise NotImplementedError 
 
 class DeserializedKeysDict(TypedDict):
     """
@@ -203,7 +202,7 @@ class LocalDatabase(Database):
 
             key, subkeys = self.__deserialize_key(key).values()
 
-            if not key in db: 
+            if key not in db: 
                 raise KeyNotFoundError(key)
 
             if subkeys and len(subkeys) > 0:
@@ -237,7 +236,8 @@ class LocalDatabase(Database):
 
             return self.__update_database(db, db_file)
 
-    def __update_database(self, new_db_content: dict, db_file):
+    @staticmethod
+    def __update_database(new_db_content: dict, db_file):
         """
         Updates the database file with the new content.
 
@@ -255,7 +255,8 @@ class LocalDatabase(Database):
         db_file.truncate()
         return True
 
-    def __find_nested_data(self, *, db_content: dict, keys: Tuple[str, List[str]], operation: str, value: Optional[Union[dict, str]] = '') -> Union[dict, str]:
+    @staticmethod
+    def __find_nested_data(*, db_content: dict, keys: Tuple[str, List[str]], operation: str, value: Optional[Union[dict, str]] = '') -> Union[dict, str]:
         """
         Finds the nested data in the database.
 
@@ -285,7 +286,8 @@ class LocalDatabase(Database):
         else:
             return db_content[key]
 
-    def __deserialize_key(self, key: List[str]) -> DeserializedKeysDict:
+    @staticmethod
+    def __deserialize_key(key: List[str]) -> DeserializedKeysDict:
         """
         Deserializes the key.
 
@@ -303,6 +305,7 @@ class LocalDatabase(Database):
             'subkeys': key[1:]
         }
     
+    @staticmethod
     def __is_valid_path(path: str) -> bool:
         """ 
         Checks if the path is valid.
