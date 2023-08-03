@@ -1,0 +1,13 @@
+{
+    "users": {
+        "furkan": {
+            "username": "furkan",
+            "creds": {
+                "2fa": "333"
+            },
+            "password": "111",
+            "role": "Başhekim",
+            "email": ""
+        }
+    }
+}
